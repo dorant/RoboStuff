@@ -7,24 +7,24 @@
 
 // PortD
 #define LOWER_LED_PORT      PORTD
-#define NUM_LOWER_LEDS      4
+#define NUM_LOWER_LEDS      5
 #define LED0_BIT            0x04
 #define LED1_BIT            0x08
 #define LED2_BIT            0x10
 #define LED3_BIT            0x20
-//#define LED4_BIT
+#define LED4_BIT            0x40
 
 // PortB
 #define UPPER_LED_PORT      PORTB
 #define NUM_UPPER_LEDS      4
-#define LED4_BIT            0x01
-#define LED5_BIT            0x02
-#define LED6_BIT            0x04
-#define LED7_BIT            0x08
+#define LED5_BIT            0x01
+#define LED6_BIT            0x02
+#define LED7_BIT            0x04
+#define LED8_BIT            0x08
 
 // Limits for the position
 #define POSITION_INITIAL        1
-#define POSITION_LIMIT          8
+#define POSITION_LIMIT          9
 
 // Direction that the LEDs are strobing
 #define DIR_MOVING_RIGHT        1 // from front view
@@ -39,7 +39,7 @@
 #define LOW_BRIGHTNESS          15
 #define NO_BRIGHTNESS           0
 
-#define NUM_TOT_LEDS            8
+#define NUM_TOT_LEDS            9
 #define MAX_LED_INDEX           (NUM_TOT_LEDS-1)
 
 // A way to adjust the timing, higher equals slower
@@ -67,8 +67,8 @@ static LarsonRuntimeData _data;
 static LarsonSettings _settings;
 
 // store bits in array for easy loop updates
-static const uint8_t lower_led_bits[] = {LED0_BIT, LED1_BIT, LED2_BIT, LED3_BIT};
-static const uint8_t upper_led_bits[] = {LED4_BIT, LED5_BIT, LED6_BIT, LED7_BIT};
+static const uint8_t lower_led_bits[] = {LED0_BIT, LED1_BIT, LED2_BIT, LED3_BIT, LED4_BIT};
+static const uint8_t upper_led_bits[] = {LED5_BIT, LED6_BIT, LED7_BIT, LED8_BIT};
 
 // Update ports where the leds are connected
 void updateLeds(void)
@@ -76,37 +76,37 @@ void updateLeds(void)
   static uint8_t cnts = 0;
   uint8_t *led_ptr = &_data.led_brightness[0];
 
-  uint8_t lowerPort = 0;
+  //uint8_t lowerPort = 0;
   for(uint8_t i=0; i < NUM_LOWER_LEDS; ++i)
   {
     if(*led_ptr++ > cnts)
     {
-      //LOWER_LED_PORT |= lower_led_bits[i];
-      lowerPort |= lower_led_bits[i];
+      LOWER_LED_PORT |= lower_led_bits[i];
+      //lowerPort |= lower_led_bits[i];
     }
     else
     {
-      //LOWER_LED_PORT &= ~lower_led_bits[i];
-      lowerPort &= ~lower_led_bits[i];
+      LOWER_LED_PORT &= ~lower_led_bits[i];
+      //lowerPort &= ~lower_led_bits[i];
     }
   }  
-  LOWER_LED_PORT = lowerPort;
+  //LOWER_LED_PORT = lowerPort;
 
-  uint8_t upperPort = 0;
+  //uint8_t upperPort = 0;
   for(uint8_t i=0; i < NUM_UPPER_LEDS; ++i)
   {
     if(*led_ptr++ > cnts)
     {
-      //UPPER_LED_PORT |= upper_led_bits[i];
-      upperPort |= upper_led_bits[i];
+      UPPER_LED_PORT |= upper_led_bits[i];
+      //upperPort |= upper_led_bits[i];
     }
     else
     {
-      //UPPER_LED_PORT &= ~upper_led_bits[i];
-      upperPort &= ~upper_led_bits[i];
+      UPPER_LED_PORT &= ~upper_led_bits[i];
+      //upperPort &= ~upper_led_bits[i];
     }
   }
-  UPPER_LED_PORT = upperPort;
+//  UPPER_LED_PORT = upperPort;
 
   cnts++;
   if(cnts > MAX_BRIGHTNESS)
@@ -116,28 +116,6 @@ void updateLeds(void)
 }
 
 
-void update_led_brightness_knight_rider2(void)
-{
-  int8_t center_led_index = _data.position-1;
-  uint8_t new_brightness[NUM_TOT_LEDS];
-
-  for(uint8_t i=0; i < NUM_TOT_LEDS; ++i)
-  {
-    if (_data.led_brightness[i] > 10)
-      new_brightness[i] = _data.led_brightness[i] - 20;
-    else
-      new_brightness[i] = 0;
-  }
-
-  // Set center
-  new_brightness[center_led_index] = MEDIUM_HIGH_BRIGHTNESS;
-
-  // Copy new calculated brightness
-  for(uint8_t i=0; i < NUM_TOT_LEDS; ++i)
-  {
-    _data.led_brightness[i] = new_brightness[i];
-  }
-}
 
 
 /**
@@ -151,8 +129,6 @@ void update_led_brightness_knight_rider(void)
   int8_t high_index = center_led_index + 1;
   int8_t low_brightness = LOW_BRIGHTNESS;
   int8_t high_brightness = LOW_BRIGHTNESS;
-  //int8_t low_brightness = 20;
-  //int8_t high_brightness = 20;
   uint8_t new_brightness[NUM_TOT_LEDS];
   
   // Setup initial and center-led
@@ -161,7 +137,6 @@ void update_led_brightness_knight_rider(void)
     new_brightness[i] = 0;
   }
   new_brightness[center_led_index] = MEDIUM_HIGH_BRIGHTNESS;
-  //new_brightness[center_led_index] = HIGH_BRIGHTNESS;
 
   // Setup leds left of center
   while(low_index >= 0)
@@ -247,9 +222,11 @@ void init_board(void)
   WDTCSR = 0x00;
   
   // Data direction register: DDR's
+  // Port B: 0-3 are outputs, B4 is an input.   
+  // Port D: 1-6 are outputs, D0 is an input.
   DDRA = 0x00;
   DDRB = 0x0F;  
-  DDRD = 0x3C;
+  DDRD = 0x7E;
 }
 
 // Receive i2c data
@@ -286,7 +263,6 @@ void loop()
   {
     update_position();
     update_led_brightness_knight_rider();
-    //update_led_brightness_knight_rider2();
     loops = 0;  
   }
 }
